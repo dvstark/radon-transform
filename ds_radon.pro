@@ -1,9 +1,9 @@
 function ds_radon, im, normal = normal, theta = theta, rho = rho, $
                    mask = mask, weight = weight, error = error, $
                    xmin = xmin, ymin = ymin, dx = dx, dy = dy, $
-                   median = median, filterr=filterr, robust=robust, $
+                   median = median, robust=robust, $
                    aperture=aperture, do_covar=do_covar, $
-                           im_covar=im_covar,radon_covar = radon_covar
+                   im_covar=im_covar,radon_covar = radon_covar
 ;
 ; NAME: DS_RADON
 ;
@@ -55,18 +55,11 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
 ;                  the same as for RADON: -(n-1)/2 if IM is MxN
 ;          MEDIAN: If keyword set, use the median instead of the
 ;                  average to normalize the absolute radon transform
-;  
-;         FILTERR: Keyword to modify which radii are used in the radon
-;                  transform.  Three possible values:
-;                       0) (default) Use all radii
-;                       1) Use radii < rho value where transform is
-;                       currently being calculated
-;                       2) Use radii > rho value where transform is
-;                       currently being calculated
-;
 ;         APERTURE: Use only pixels within radius r of given rho/theta    
-;
-;
+;         DO_COVAR: Set to calculate the covariance matrix of the
+;                   Radon transform
+;         IM_COVAR: Covariance matrix of input velocity field   
+  
 ; OUTPUTS: The routine returns a structure with various transforms
 ;          included. Each transform is discussed in detail under
 ;          PROCEDURE below.  The keys in the result structure are as
@@ -93,6 +86,7 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
 ;           beyond the edge of the map.  Values with 999 indicate no data.
 ;           This improves upon hte maskfrac flag which does not account for
 ;           edges explicitly
+;RADON_COVAR: calculated radon transform covariance matrix
 ;  
 ; SIDE EFFECTS: For large images a considerable amount of memory might
 ;               be consumed as at least six transforms are calculated
@@ -172,26 +166,24 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
 ;
 ; MODIFICATION HISTORY:
 ;
-;       Oct 4, 2005, jarle (jarle@astro.up.pt)
+;       Oct 4, 2005, J. Brinchmann (jarle@astro.up.pt)
 ;	   Documented routine.  
 ;
 ;       Sep 28, 2015, D. Stark (david.stark@ipmu.jp)
 ;         Added option to use median to normalize absolute radon
-;         transform rather than avg which can be strongly affected by
-;         outliers 
+;         transform rather than avg which could be strongly affected by
+;         outliers
+;         Added outlier identification (probably needs tweaking)
+;
 ;       June 7, 2017, D. Stark
 ;         Added LMASK to output
 ;
 ;       Aug 1, 2017 D. Stark
 ;         Added EDGE flag to output
+;         Added option to calculate covariance matrix using python  
 ;  
 ;-
-   ;;
-   ;; A modified Radon transform routine. It is geared to carrying out
-   ;; a specific calculation as required for the calculation of J_R
-   ;; but can also be used for Radon transform calculations (for
-   ;; testing purposes)
-   ;;
+  
 
    ;;-----------------------------
    ;; Get dimensions of image.
@@ -266,12 +258,9 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
       ddiff = tim
    endif
 
-   ;spax_list = {xind:ptr_new(/allocate_heap),yind:ptr_new(/allocate_heap),locations:ptr_new(/allocate_heap)}
-   ;spax_list = replicate(spax_list,[n_theta,n_rho])
-   inds_radon = make_array(n_theta, n_rho,/index)
+   inds_radon = make_array(n_theta, n_rho,/index) ;1d indices of radon transform
    inds_map = make_array(m,n,/index)  ;1d indices of input map
-   weights_arr = intarr(n_elements(inds_map),n_elements(inds_radon))
-   spax_list = ptrarr(n_theta,n_rho,/allocate_heap)
+   weights_arr = intarr(n_elements(inds_map),n_elements(inds_radon)) ;1 if it's included in calculation at inds_map[i]
    
    ;; Calculate some variables for the paths
    a = -(dx/dy)*cost/sint
@@ -316,10 +305,7 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
 
          
          
-         ;print,theta[i],rho[j]
-                                ;use only x/y indices within radius r
-                                ;of rho and theta
-                                ;get x and y for this rho/theta combination
+        
 
          xcent = rho[j]*cos(theta[i])
          ycent = rho[j]*sin(theta[i])
@@ -340,33 +326,14 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
          endif 
          
                                 ;if filterr is set, do the remove any
-                                ;that have radii </> the current rho
-         if keyword_set(filterr) then begin
-                                ;THIS IS WRONG, THE LAST PART OF HTE
-                                ;WHERE STATEMENT SHOULDNT HAVE THE
-                                ;XIN0/YIND0 TERMS
-
-            
-            if filterr eq 1 then begin
-               ;print,'filterr = ',filterr
-               use = where(ix ge 0 and ix lt m and iy ge 0 and iy lt n $
-                           and sqrt((ix-xind0)^2+(iy-yind0)^2) le abs(rho[j]), n_use)
-               
-            endif else if filterr eq 2 then begin
-               ;print,'filter = ',filterr
-               use = where(ix ge 0 and ix lt m and iy ge 0 and iy lt n $
-                           and sqrt((ix-xind0)^2+(iy-yind0)^2) ge abs(rho[j]), n_use)
-               
-            endif
-         
-            
-         endif
+                                ;that have radii </> the current rho         
          
          if (n_use le 2) then continue 
          ix = ix[use]
          iy = iy[use]
 
-         ;; Carry out the evaluation of the integrand. 
+         ;; Carry out the evaluation of the integrand (to do: make
+         ;; "normal" version accept masks/set maskfrac variable properly
          if (keyword_set(normal)) then begin
             func = im[ix, iy]
             func_norm = func
@@ -484,12 +451,7 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
       endfor
 
    endfor
-   ;set_plot,'x'
-   ;image_plot,weights_arr,xtitle='RT pixel',ytitle='MAP pixel'
-
-                                ;matrix multiplication can be sped up
-                                ;dramatically in python using sparse
-                                ;arrays.
+ 
    if do_covar then begin
    
       weights_file = 'weights_arr.fits'
@@ -506,18 +468,12 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
       endif
       
       
-      ;fits_write,weights_file,weights_arr
-      ;fits_write,im_covar_file,im_covar
-      
       print,'creating covariance matrix for radon transform'
       radon_covar = calc_radon_covar(weights_arr,im_covar)
       covar_dim = size(radon_covar,/dim)
       err_1d = radon_covar[indgen(covar_dim[0]),indgen(covar_dim[0])]
-                                ;spawn,'python calc_radon_covar.py '+weights_file+' '+im_covar_file+' '+radon_covar_file + ' ' + radon_covar_diag_file
 
-      
-      ;fits_read,radon_covar_diag_file,err_1d
-      
+           
       dtim_alt = reform(sqrt(err_1d),n_theta,n_rho)
       dtim = dtim_alt
    endif
@@ -526,7 +482,7 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
       
    res = {map: tim, theta: theta, rho: rho, diff: diff, vmax: vmax, $ 
           vmin: vmin, n_zeroc: float(n_zeroc), length: length, xmin: xmin, $ 
-          ymin: ymin, crosszero:crosszero, maskfrac: maskfrac, edge:edge,spax_list:spax_list}
+          ymin: ymin, crosszero:crosszero, maskfrac: maskfrac, edge:edge}
    
    if (do_error) then res = create_struct(res, $ 
                                           'error', dtim, $ 
