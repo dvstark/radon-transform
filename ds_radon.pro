@@ -58,16 +58,13 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
 ;         APERTURE: Use only pixels within radius r of given rho/theta    
 ;         DO_COVAR: Set to calculate the covariance matrix of the
 ;                   Radon transform
-<<<<<<< HEAD
 ;         IM_COVAR: Covariance matrix of input velocity field
 ;  
 ;           ROBUST: Keyword to remove outliers when calcalating RT at
 ;                   given location. This is experimental.
 ;  
-=======
 ;         IM_COVAR: Covariance matrix of input velocity field   
   
->>>>>>> 738b81b30ec7c0c33bbb31d0a44801e5d79533a3
 ; OUTPUTS: The routine returns a structure with various transforms
 ;          included. Each transform is discussed in detail under
 ;          PROCEDURE below.  The keys in the result structure are as
@@ -92,11 +89,8 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
 ;           where measurements may be compromised by missing/bad data.
 ;     EDGE: Indicates how many pixels included in an aperture extend
 ;           beyond the edge of the map.  Values with 999 indicate no data.
-<<<<<<< HEAD
 ;           This improves upon the maskfrac flag which does not account for
-=======
 ;           This improves upon hte maskfrac flag which does not account for
->>>>>>> 738b81b30ec7c0c33bbb31d0a44801e5d79533a3
 ;           edges explicitly
 ;RADON_COVAR: calculated radon transform covariance matrix
 ;  
@@ -187,12 +181,9 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
 ;         outliers
 ;         Added outlier identification (probably needs tweaking)
 ;
-<<<<<<< HEAD
-=======
 ;       June 7, 2017, D. Stark
 ;         Added LMASK to output
 ;
->>>>>>> 738b81b30ec7c0c33bbb31d0a44801e5d79533a3
 ;       Aug 1, 2017 D. Stark
 ;         Added EDGE flag to output
 ;         Added option to calculate covariance matrix using python  
