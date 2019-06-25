@@ -1,0 +1,10 @@
+
+8082-6102 failed
+Error index:         -144
+Error message: 
+Attempt to subscript IMSZ with <INT      (       1)> is out of range.
+% Attempt to subscript IMSZ with <INT      (       1)> is out of range.
+% Execution halted at:  RADON_WRAPPER     446 /home/dstark/manga/radon/shared_codes/github/radon-transform/radon_wrapper.pro
+%                       $MAIN$             24 /home/dstark/manga/radon/shared_codes/github/radon-transform/example_wrapper.pro
+hared_codes/github/radon-transform/example_wrapper.pro
+/manga/radon/shared_codes/github/radon-transform/example_wrapper.pro

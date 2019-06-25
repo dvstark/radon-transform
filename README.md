@@ -43,6 +43,9 @@ traces it. Outputs information into a fits file, and plots results
 trace_radon.pro -- traces the ridge in the absolute radon transform
 defined by where the transform is minimized as a function of radius
 
+translate_radon.pro -- translates a radon transform map along the
+theta axis, flipping as necessary at 0 and 180.
+
 upwrap_pa.pro -- unwraps an array of postion angles so there's no
 dramatic jump at +/- 180
 
