@@ -495,6 +495,10 @@ pro radon_wrapper,name,output,outfile,xshift=xshift,yshift=yshift,plotfile=plotf
         xyouts,pos[0,0]+xtoff,pos[3,0]-0.1-sep*6,ststr,/norm,color=cgcolor('black'),charsize=1.5
 
         device,/close
+
+                                ;comment these lines if you
+                                ;don't want to convert the eps
+                                ;file to a png file
         spawn,'convert -density 125 '+plotfile+'.eps'+' '+plotfile+'.png'
         spawn,'rm '+plotfile+'.eps'
         

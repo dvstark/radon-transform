@@ -1,7 +1,8 @@
 ;example run of radon_wrapper.pro
 
-db=mrdfits('/home/dstark/manga/fits/drpall-v2_5_3.fits',1)
-name = '8082-6102'
+drpallpath = '/home/david-stark/manga/fits/drpall-v2_5_3.fits'
+db=mrdfits(drpallpath,1)
+name = '8082-3702'
 dbind=where(db.plateifu eq name)
 pxscl=0.5                       ;pixel scale
 
@@ -13,14 +14,15 @@ yshift=0
 radon_ap=db[dbind].nsa_elpetro_th50_r/pxscl*db[dbind].nsa_elpetro_ba
 
 err_log='test_radon.log'
-do_covar = 1        ;let's not calculate the full covariance matrix just yet...
+do_covar = 0        ;let's not calculate the full covariance matrix just yet...
 
 eh_on = 0                       ;set to 1 to turn on error handling
 plotfile='test_radon'           ;final output file will be test_radon.png
 stars=0                         ;will analyze stellar velocity field
 mapstype = 'SPX'
-mapspath = '~/manga/fits/mpl8/dap/SPX/'
+;mapspath = '~/manga/fits/mpl8/dap/SPX/'
+mapspath = './'
 
-radon_wrapper,name,output,output_file,xshift=xshift,yshift=yshift,radon_ap=radon_ap,err_log=err_log,do_covar=do_covar,eh_on=0,plotfile=plotfile,stars=stars,mapstype=mapstype,mapspath=mapspath,mc_iter=0
+radon_wrapper,name,output,output_file,xshift=xshift,yshift=yshift,radon_ap=radon_ap,err_log=err_log,do_covar=do_covar,eh_on=0,plotfile=plotfile,stars=stars,mapstype=mapstype,mapspath=mapspath,mc_iter=0,drpallpath='/home/david-stark/manga/fits/drpall-v2_5_3.fits'
 
 end
