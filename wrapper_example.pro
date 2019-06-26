@@ -20,8 +20,7 @@ eh_on = 0                       ;set to 1 to turn on error handling
 plotfile='test_radon'           ;final output file will be test_radon.png
 stars=0                         ;will analyze stellar velocity field
 mapstype = 'SPX'
-;mapspath = '~/manga/fits/mpl8/dap/SPX/'
-mapspath = './'
+mapspath = '~/manga/fits/mpl8/dap/SPX/'
 
 radon_wrapper,name,output,output_file,xshift=xshift,yshift=yshift,radon_ap=radon_ap,err_log=err_log,do_covar=do_covar,eh_on=0,plotfile=plotfile,stars=stars,mapstype=mapstype,mapspath=mapspath,mc_iter=0,drpallpath='/home/david-stark/manga/fits/drpall-v2_5_3.fits'
 
