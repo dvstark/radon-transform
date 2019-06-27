@@ -1,0 +1,131 @@
+###############
+####Summary####
+###############
+
+The program, radon_wrapper.pro, is my own personal script to load
+MaNGA data, prepare the data, apply the radon transformation, analyze
+the radon transformation, and save the output.  The steps it goes through are:
+
+1) Load MAPS data (either stellar or gas velocities)
+
+2) recenter the maps so the optical center is directly over the central pixel
+
+3) (Optional) apply an additional offset if a alternate center is known
+
+4) Mask any bad data (combine existing masks as well as a SNR cut)
+
+5) apply the radon transform, including propagating the covariance
+matrix if requested
+
+6) Trace the ridge in the radon transformation defined by where the
+value of theta where the transformation is minimized as a function of
+theta
+
+7) Save the output to a fits file, and create a diagnostic plot
+
+###########################
+###Description of Output###
+###########################
+
+The wrapper writes a fits file with 13 different extensions each
+containing different useful information. The following is a short
+explanation of each extension (extension number and extension name,
+followed by the description):
+
+Extension 0 -- Empty
+
+Extension 1 -- 'velocity'
+
+	  The velocity field (after preprocessing)
+
+Extension 2 -- 'velocity_error'
+
+	  The input velocity field errors (after preprocessing)
+
+Extension 3 -- 'velocity_mask'
+
+	  The velocity field mask (after preprocessing)
+
+Extension 4 -- 'radon'
+
+	  The absolute radon transform of the veloctity field
+
+Extension 5 -- 'radon_rescale'
+
+	  A rescaled version of the radon transform where the range of
+	  values at fixed rho (each row in the matrix) range from 0 to
+	  1. This is mostly for viewing purposes.
+
+Extension 6 -- 'radon_mask'
+
+	  A mask indicating where the radon transform may be
+	  unreliable.  It flags infinite values, zeros, regions where
+	  the radon "aperture" overlapped masked data in the velocity
+	  field, and regions where the radon "aperture" extended over
+	  the edge of the map.
+
+Extension 7 -- 'radon_error'
+
+	  Error on radon transform
+
+Extension 8 -- 'radon_theta'
+
+	  Array of theta values for this transform (x-axis)
+
+Extension 9 -- 'radon_rho'
+
+	  Array of rho values for this transform (y-axis)
+
+Extension 10 -- 'radon_length'
+
+	  Number of pixels used to calculate the transform at a given
+	  (rho,theta) location. This can vary due if the radon
+	  aperture is not finite, near the edge or masked regions of a
+	  velocity field, and small variations will occur to the the
+	  finite pixel size and nearest-neighbor interpolation used
+	  when calculating the radon transformation.
+
+Extension 11 -- 'radon_maskfrac'
+
+	  Map indicating hte fraction of data in the velocity field
+	  that was within the radon aperture but masked (these values
+	  can be biased)
+
+Extension 12 -- 'radon_edge'                                   
+
+	  Map indicating whether the radon aperture at a given point
+	  overlapped the edge of the velocity field
+
+Extension 13 -- 'trace'   
+
+	  The results of the radon transform trace along the ridge
+	  where the transform is minimized as a function of rho.  The
+	  contents are:
+
+   	  RHO -- distance from center           
+
+   	  THETA -- angle where RT is minimized (basically position angle but
+   	  offset by 90 degrees)
+
+   	  ETHETA -- uncertainty on theta         
+
+   	  STATUS -- status returned by MPFIT (see their documentation
+   	  for further details). Typically we want to avoid anything <
+   	  1.
+
+   	  SLICE_LENGTH -- fraction of data at fixed rho which was
+   	  usable.  The trace can perform poorly when slice_length gets
+   	  small, although this depends on exactly which data are
+   	  masked (see "bias_flag" for an attempt at a more robust way
+   	  of flagging theta measurements where missing data becomes a
+   	  problem).
+
+   	  BIAS_FLAG -- indicates that the estimate of theta may be
+   	  biased by missing data. For each radius, rho[i], I check to
+   	  see if the value of theta at the previous radius, rho[i-1],
+   	  falls inside a masked region at the current rho[i]. If it
+   	  does, then it is flagged
+
+	  When I plot these traces, I typically use the selector:
+
+	  sel=where(status gt 0 and 1-bias_flag)

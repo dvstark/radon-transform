@@ -18,7 +18,12 @@ pro radon_wrapper,name,output,outfile,xshift=xshift,yshift=yshift,plotfile=plotf
 ;  
 ; output -- just returns 1 if worked or -1 if failed  
 ;
-; outfile  -- output fits file which holds radon map, trace, etc.
+; outfile  -- output fits file which holds various data products.  It
+;             contains 13 extensions. See radon_wrapper.readme for
+;             more info
+;
+;
+;
 ;
 ; KEYWORDS:
 ;
