@@ -20,10 +20,9 @@ eh_on = 0                       ;set to 1 to turn on error handling
 plotfile='test_radon_SPX'           ;final output file will be test_radon.png
 stars=1                         ;will analyze stellar velocity field
 mapstype = 'HYB10'              ;'SPX'
-mapstype = 'SPX'
 mapspath = './'   ;'~/manga/fits/mpl8/dap/SPX/'
-maps_suffix ='GAU-MILESHC'
+maps_suffix ='GAU-MILESHC'  ;'MILESHC-MILESHC'
 
-radon_wrapper,name,output,output_file,xshift=xshift,yshift=yshift,radon_ap=radon_ap,err_log=err_log,do_covar=do_covar,eh_on=0,plotfile=plotfile,stars=stars,mapstype=mapstype,mapspath=mapspath,mc_iter=0,drpallpath='/home/david-stark/manga/fits/drpall-v2_5_3.fits';,maps_suffix=maps_suffix
+radon_wrapper,name,output,output_file,xshift=xshift,yshift=yshift,radon_ap=radon_ap,err_log=err_log,do_covar=do_covar,eh_on=0,plotfile=plotfile,stars=stars,mapstype=mapstype,mapspath=mapspath,mc_iter=0,drpallpath='/home/david-stark/manga/fits/drpall-v2_5_3.fits',maps_suffix=maps_suffix
 
 end
