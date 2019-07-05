@@ -1,4 +1,4 @@
-pro radon_wrapper,name,output,outfile,xshift=xshift,yshift=yshift,plotfile=plotfile, radon_ap=radon_ap,err_log=err_log,do_covar=do_covar,mc_iter=mc_iter,quiet=quiet,eh_on=eh_on,mapstype=mapstype,drpallpath=drpallpath,mapspath=mapspath,stars=stars
+pro radon_wrapper,name,output,outfile,xshift=xshift,yshift=yshift,plotfile=plotfile, radon_ap=radon_ap,err_log=err_log,do_covar=do_covar,mc_iter=mc_iter,quiet=quiet,eh_on=eh_on,mapstype=mapstype,drpallpath=drpallpath,mapspath=mapspath,stars=stars,sncut=sncut, maps_suffix = maps_suffix
 
   print,'analyzing '+name
   
@@ -60,8 +60,15 @@ pro radon_wrapper,name,output,outfile,xshift=xshift,yshift=yshift,plotfile=plotf
 ;
 ;stars -- set to 1 to run on stellar velocity fields rather than
 ;         ionized gas
+;
+; sncut -- required signal-to-noise per spaxel (default = 3)  
+;
+;update log
+;
+;July 5, 2019 -- added SN keyword and ability to mask low S/N regions
+;                for stellar velocity fields
 
-
+  
 ;;;;;Some initial setup;;;;
   
   if 1-keyword_set(eh_on) then eh_on = 1
@@ -69,9 +76,11 @@ pro radon_wrapper,name,output,outfile,xshift=xshift,yshift=yshift,plotfile=plotf
   if 1-keyword_set(yshift) then yshift = 0
   if 1-keyword_set(radon_ap) then radon_ap = 9e9
   if 1-keyword_set(do_covar) then do_covar = 0
+  if 1-keyword_set(sncut) then sncut=3
   if not keyword_set(mapstype) then mapstype='HYB10'
   if not keyword_set(mapspath) then mapspath='~/manga/fits/mpl7/dap/'+mapstype+'/';HYB10/'
   if not keyword_set(drpallpath) then drpallpath = '/home/dstark/manga/fits/drpall-v2_5_3.fits'
+  if 1-keyword_set(maps_suffix) then maps_suffix = 'MILESHC-MILESHC'
 
 
                                 ;if there's an error, print it
@@ -117,9 +126,11 @@ pro radon_wrapper,name,output,outfile,xshift=xshift,yshift=yshift,plotfile=plotf
   ifudsgn = db[dbind].ifudsgn  
  
   mapsfile = mapspath+'manga-'+strtrim(string(plate),2)+'-'$
-             +strtrim(ifudsgn,2)+'-MAPS-'+mapstype+'-MILESHC-MILESHC.fits.gz'
-
+             +strtrim(ifudsgn,2)+'-MAPS-'+mapstype+'-'+maps_suffix+'.fits.gz'
   
+;             +strtrim(ifudsgn,2)+'-MAPS-'+mapstype+'-GAU-MILESHC.fits.gz'
+
+
   if 1-file_test(mapsfile) then begin
      logger,err_log,'maps file not found for '+name
      goto,the_end
@@ -167,18 +178,19 @@ pro radon_wrapper,name,output,outfile,xshift=xshift,yshift=yshift,plotfile=plotf
      vel_mask = vels_masks[*,*,halpha_ind]
      sn = gf*sqrt(gf_ivar)
      
-     vel_mask = (vel_mask gt 0) or (sn lt 3)
+     vel_mask = (vel_mask gt 0) or (sn lt sncut)
 
   endif else begin
 
      vel = mrdfits(mapsfile,'STELLAR_VEL',hdr,/silent)
      vel_ivar = mrdfits(mapsfile,'STELLAR_VEL_IVAR',/silent)
      vel_mask = mrdfits(mapsfile,'STELLAR_VEL_MASK',/silent)
+     bin_sn = mrdfits(mapsfile,'BIN_SNR',/silent)
      
      pxscl=abs(sxpar(hdr,'PC2_2')*3600)
      evel=1./sqrt(vel_ivar)
      evel[where(1-finite(evel))]=0
-     vel_mask = vel_mask gt 0
+     vel_mask = (vel_mask gt 0) or (bin_sn lt sncut)
 
   endelse
   
