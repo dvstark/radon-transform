@@ -327,6 +327,8 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
          
          if keyword_set(aperture) then begin
             use = where(ix ge 0 and ix lt m and iy ge 0 and iy lt n and rad lt aperture, n_use)
+            if (n_use le 2) then continue ;if not enough data, just skip
+            
             edgeflag = total((ix[use]+aperture gt m) or (ix[use]-aperture lt 0) $
                              or (iy[use]+aperture gt n) or (iy[use]-aperture lt 0))
          endif 
@@ -334,7 +336,6 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
                                 ;if filterr is set, do the remove any
                                 ;that have radii </> the current rho         
          
-         if (n_use le 2) then continue 
          ix = ix[use]
          iy = iy[use]
 
@@ -342,6 +343,13 @@ function ds_radon, im, normal = normal, theta = theta, rho = rho, $
          ;; "normal" version accept masks/set maskfrac variable properly
          if (keyword_set(normal)) then begin
             func = im[ix, iy]
+            if (do_mask) then begin
+               t_mask = mask[ix, iy]
+               use2 = where(t_mask eq 1, n_use2)
+               frac_mask = float(n_elements(t_mask) - n_use2)/n_elements(t_mask)
+               if (n_use2 le 1) then continue
+               func = func[use2]
+            endif
             func_norm = func
          endif else begin
             ;; Here we have make our required adjustments.
