@@ -328,30 +328,34 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;use closest peak within tolerance of last guess
         closest = min(p[1,*] - lastparms[0],ii)
-        guess = guess_maxpeak
-        guess[0] = p[1,ii]
+        guess_closepeak = guess_maxpeak
+        guess_closepeak[0] = p[1,ii]
 
         
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;use previous fitted values;;;;
-        guess = lastparms
-        
-        if (j eq rho0_ind) or n_elements(theta_arr) eq 0 or (n_elements(lastparms) gt 0 and lastparms[0] eq -9999) then begin
-           maxval = max(p[2,*],max_p_ind)
-           theta_guess = p[1,max_p_ind]
-           rt_guess=  p[2,max_p_ind]
-           width=p[psz[0]-1,max_p_ind]/2*dtheta/sqrt(2*alog(2))
-           guess = [theta_guess,1./width^2,rt_guess,0]
-        endif else begin
+        guess_lastfit = lastparms
 
-           if guess_mode eq 'peak' and (n_elements(lastparms eq 0) lastparms[0] eq -9999) or then begin
-                                ;find closest peak to last fitted
-                                ;value
-              stop
-           endif else begin
-              guess = lastparms ;values from previous successful iteration
-           endelse
+        ;decide which guess to use
+        if (j eq rho0_ind) or n_elements(theta_arr) eq 0 or (n_elements(lastparms) gt 0 and lastparms[0] eq -9999) then guess = guess_maxpeak else begin
+           if guess_mode eq 'peak' and abs(guess[0] - lastparms[0]) lt tolerance then guess = guess_closepeak
+           if guess_mode eq 'peak' and abs(guess[0] - lastparms[0]) gt tolerance then guess = guess_maxpeak
+           if guess_mode ne 'peak' then guess = guess_lastfit
         endelse
+        
+
+        
+        
+        ;old way  of initiating guess
+        ;; if (j eq rho0_ind) or n_elements(theta_arr) eq 0 or (n_elements(lastparms) gt 0 and lastparms[0] eq -9999) then begin
+        ;;    maxval = max(p[2,*],max_p_ind)
+        ;;    theta_guess = p[1,max_p_ind]
+        ;;    rt_guess=  p[2,max_p_ind]
+        ;;    width=p[psz[0]-1,max_p_ind]/2*dtheta/sqrt(2*alog(2))
+        ;;    guess = [theta_guess,1./width^2,rt_guess,0]
+        ;; endif else begin
+        ;;    guess = lastparms    ;values from previous successful iteration
+        ;; endelse
         
         guess = double(guess)
         

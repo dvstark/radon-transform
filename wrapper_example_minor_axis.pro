@@ -2,7 +2,7 @@
 
 drpallpath = '/homes/dstark/manga/fits/drpall-v2_5_3.fits'
 db=mrdfits(drpallpath,1)
-name = '7977-9102'
+name = '7977-3704'
 dbind=where(db.plateifu eq name)
 pxscl=0.5                       ;pixel scale
 

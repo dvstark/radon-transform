@@ -342,7 +342,7 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
   ncovar = nradon_covar
   nsmo= 0.15 
 
-  trace_minor=trace_radon_vm(nmap,nrho,ntheta,smo=nsmo,error=enrror,mask=nmask,covar=ncovar,mc_iter=mc_iter,guess_mode='peak',/ploton,/inspect,tolerance=45) ;,/silent,/ploton,/inspect)
+  trace_minor=trace_radon_vm(nmap,nrho,ntheta,smo=nsmo,error=enrror,mask=nmask,covar=ncovar,mc_iter=mc_iter,guess_mode='peak',/ploton,/inspect,tolerance=90) ;,/silent,/ploton,/inspect)
 
   
    
