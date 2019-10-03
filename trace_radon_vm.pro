@@ -1,5 +1,4 @@
-
-function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton,inspect=inspect,silent=silent,covar=covar,mc_iter=mc_iter,invert=invert,center_only=center_only,tolerance=tolerance
+function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton,inspect=inspect,silent=silent,covar=covar,mc_iter=mc_iter,invert=invert,center_only=center_only,tolerance=tolerance,guess_mode = guess_mode;, fit_range=fit_range
   
   if keyword_set(inspect) then silent=0
 
@@ -99,7 +98,8 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
   if 1-keyword_set(silent) then silent = 0
   if 1-keyword_set(tolerance) then tolerance = 30.
   if 1-keyword_set(mc_iter) then mc_iter=1
-
+  if 1-keyword_set(guess_mode) then guess_mode = ''
+  
   csz = size(covar,/dim)
   if keyword_set(covar) and n_elements(csz) eq 1 then begin
      print,'invalid covariance matrix, ignoring'
@@ -313,6 +313,29 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
         ;;;to the nearest troughs, or betwen the peak +/-!pi/4,;;;;;;;;;;
         ;;;whichever is a smaller range;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+                                ;get different guesses for this
+                                ;fit. which one we choose depends on
+                                ;how code is initialized
+
+        ;;;;;initial guess (no prior info);;;;;
+        maxval = max(p[2,*],max_p_ind)
+        theta_guess = p[1,max_p_ind]
+        rt_guess=  p[2,max_p_ind]
+        width=p[psz[0]-1,max_p_ind]/2*dtheta/sqrt(2*alog(2))
+        guess = [theta_guess,1./width^2,rt_guess,0]
+        guess_maxpeak = guess
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;use closest peak within tolerance of last guess
+        closest = min(p[1,*] - lastparms[0],ii)
+        guess = guess_maxpeak
+        guess[0] = p[1,ii]
+
+        
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;use previous fitted values;;;;
+        guess = lastparms
+        
         if (j eq rho0_ind) or n_elements(theta_arr) eq 0 or (n_elements(lastparms) gt 0 and lastparms[0] eq -9999) then begin
            maxval = max(p[2,*],max_p_ind)
            theta_guess = p[1,max_p_ind]
@@ -320,8 +343,16 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
            width=p[psz[0]-1,max_p_ind]/2*dtheta/sqrt(2*alog(2))
            guess = [theta_guess,1./width^2,rt_guess,0]
         endif else begin
-           guess = lastparms    ;values from previous successful iteration
+
+           if guess_mode eq 'peak' and (n_elements(lastparms eq 0) lastparms[0] eq -9999) or then begin
+                                ;find closest peak to last fitted
+                                ;value
+              stop
+           endif else begin
+              guess = lastparms ;values from previous successful iteration
+           endelse
         endelse
+        
         guess = double(guess)
         
         parinfo={value:0.d,limited:[0,0],limits:[-9999.d,9999.d]} ;partinfo structure which is input to mpfit

@@ -331,7 +331,7 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
   covar = radon_covar
   smo= 0.15
 
-  trace=trace_radon_vm(map,rho,theta,smo=smo,error=error,mask=mask,covar=covar,mc_iter=mc_iter);,/ploton,/inspect,tolerance=45,fit_range=45.) ;,/silent,/ploton,/inspect)
+  trace=trace_radon_vm(map,rho,theta,smo=smo,error=error,mask=mask,covar=covar,mc_iter=mc_iter,/silent);,/ploton,/inspect,tolerance=45,fit_range=45.) ;,/silent,/ploton,/inspect)
 
   nradon_mask = (1-finite(radon_norm.map)) or (radon_norm.map eq 0) or (radon_norm.maskfrac gt 0) or (radon_norm.length lt radon_ap)
   nmap = abs(radon_norm.map)
@@ -342,7 +342,7 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
   ncovar = nradon_covar
   nsmo= 0.15 
 
-  trace_minor=trace_radon_vm(nmap,nrho,ntheta,smo=nsmo,error=enrror,mask=nmask,covar=ncovar,mc_iter=mc_iter);,/ploton,/inspect,tolerance=45,fit_range=45.) ;,/silent,/ploton,/inspect)
+  trace_minor=trace_radon_vm(nmap,nrho,ntheta,smo=nsmo,error=enrror,mask=nmask,covar=ncovar,mc_iter=mc_iter,guess_mode='peak',/ploton,/inspect,tolerance=45) ;,/silent,/ploton,/inspect)
 
   
    
@@ -487,7 +487,15 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
      y0 = (imsz[2]-1)/2
      drawifu,strtrim(string(db[ii].IFUDESIGNSIZE),2),xoff=x0,yoff=y0,pxscl=sdss_pxscl,coords=coords
 
+                                ;normal radon map;;;
+     sz = size(radon_rescale,/dim)
+     thetagrid = rebin(radon.theta,sz[0],sz[1])
+     rhogrid = transpose(rebin(radon.rho,sz[1],sz[0]))
 
+     cgcontour,abs(radon_norm.map)*(1-nradon_mask),thetagrid/!dtor,rhogrid,nlevels=15,/cell_fill,position=pos[*,3],/noerase,missingvalue=0,xtitle='theta [deg]',ytitle='rho',title='RT'
+     sel=where((trace_minor.status gt 0 and 1-trace_minor.bias_flag),count)
+     cgoplot,(trace_minor.theta[sel]*(trace_minor.theta[sel] gt 0 and trace_minor.theta[sel] lt !pi) + (trace_minor.theta[sel] + !pi)*(trace_minor.theta[sel] lt 0) + (trace_minor.theta[sel]-!pi)*(trace_minor.theta[sel] gt !pi))/!dtor,trace_minor.rho[sel],psym=4,color='turquoise',symsize=0.5,thick=2
+     
      ;;;;radon map;;;;
      sz = size(radon_rescale,/dim)
      thetagrid = rebin(radon.theta,sz[0],sz[1])
@@ -497,8 +505,7 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
      cgcolorbar,range=[0,1],/vertical,/right,position=[pos[2,4]+0.01,pos[1,4],pos[2,4]+0.03,pos[3,4]]
      sel=where((trace.status gt 0 and 1-trace.bias_flag),count)
      cgoplot,(trace.theta[sel]*(trace.theta[sel] gt 0 and trace.theta[sel] lt !pi) + (trace.theta[sel] + !pi)*(trace.theta[sel] lt 0) + (trace.theta[sel]-!pi)*(trace.theta[sel] gt !pi))/!dtor,trace.rho[sel],psym=4,color='magenta',symsize=0.5,thick=2
-     sel=where((trace_minor.status gt 0 and 1-trace_minor.bias_flag),count)
-     cgoplot,(trace_minor.theta[sel]*(trace_minor.theta[sel] gt 0 and trace_minor.theta[sel] lt !pi) + (trace_minor.theta[sel] + !pi)*(trace_minor.theta[sel] lt 0) + (trace_minor.theta[sel]-!pi)*(trace_minor.theta[sel] gt !pi))/!dtor,trace_minor.rho[sel],psym=4,color='turquoise',symsize=0.5,thick=2
+
      
      ;;trace
 
