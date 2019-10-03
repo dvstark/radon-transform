@@ -152,12 +152,12 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
   ;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;initialize output;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;
-  rho_arr = []
-  theta_arr = []
-  etheta_arr = []
-  slice_length = []
-  flag_arr = []
-  status_arr = []                      
+  rho_arr = [-999]
+  theta_arr = [-999]
+  etheta_arr = [-999]
+  slice_length = [-999]
+  flag_arr = [-999]
+  status_arr = [-999]                      
   lastparms = [-9999,-9999,-9999] ;store dummy parameters from previous row (these will eventually be used as guesses for the next row)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -265,7 +265,8 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
 
         ;run tool to find peaks in the data
         p=peakfinder(slice[sel],theta[sel],/optimize,climits=climits,/widget_off,silent=silent)
-        if p[-1] eq 0 then begin
+        psz=size(p,/dim)
+        if p[n_elements(p)-1] eq 0 then begin
            if not silent then print,'no peaks found at rho = '+strtrim(string(rho[j]),2)+'. Skipping'
            continue
         endif
@@ -278,10 +279,9 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
         ;;;can be too restrictive, so I force it to not go above;;;;
         ;;;0.2.  0.2 is just found via trial and error;;;;;;;;;;;;;;
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-              
-        keep = where(p[-2,*] gt (climits[2] < 0.2))
+        keep = where(p[psz[0]-2,*] gt (climits[2] < 0.2))
                                 ;if first iteration, keep focus on primary region between 0 and pi
-        if j eq rho0_ind then keep=where(p[-2,*] gt (climits[2] < 0.2) $
+        if j eq rho0_ind then keep=where(p[psz[0]-2,*] gt (climits[2] < 0.2) $
                                          and p[1,*] ge -!pi/4 and p[1,*] le !pi+!pi/4)
         p=p[*,keep]
         
@@ -290,8 +290,9 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
                                 ;found, it's handled below
         
         t = peakfinder(max(slice[sel])-slice[sel],theta[sel],/optimize,climits=climits,/widget_off,silent=silent)
+        tsz = size(t,/dim)
         if t[0] ne 0 then begin 
-           keep = where(t[-2,*] gt (climits[2] < 0.1))
+           keep = where(t[tsz[0]-2,*] gt (climits[2] < 0.1))
            t=t[*,keep]
         endif           
 
@@ -316,7 +317,7 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
            maxval = max(p[2,*],max_p_ind)
            theta_guess = p[1,max_p_ind]
            rt_guess=  p[2,max_p_ind]
-           width=p[-1,max_p_ind]/2*dtheta/sqrt(2*alog(2))
+           width=p[psz[0]-1,max_p_ind]/2*dtheta/sqrt(2*alog(2))
            guess = [theta_guess,1./width^2,rt_guess,0]
         endif else begin
            guess = lastparms    ;values from previous successful iteration
@@ -413,7 +414,8 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
 
         if keyword_set(ploton) then begin
            cgoplot,theta_fit,slice_fit,color=cgcolor('orange'),psym=4,thick=5
-           cgoplot,theta[where(slice_mask)],slice[where(slice_mask)],psym=7,color='magenta',symsize=2,thick=4
+           msel=where(slice_mask,mcount)
+           if mcount gt 0 then cgoplot,theta[where(slice_mask)],slice[where(slice_mask)],psym=7,color='magenta',symsize=2,thick=4
         endif
         
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -460,9 +462,9 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
 
                                 ;will keep track of fit parameters,
                                 ;errors, and fit status for mc mode
-        parms_stack = []
-        eparms_stack = []
-        status_stack = []
+        parms_stack = [-1,-1,-1,-1,-1]
+        eparms_stack = [-1,-1,-1,-1,-1]
+        status_stack = [-1]
 
         
         for ll = 0,mc_iter-1 do begin
@@ -472,8 +474,7 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
 
            parms = mpfitfun(func_name,theta_fit,newslice_fit,slice_err_fit,yfit=out,$
                             bestnorm=chisq,perror=eparms,status=status,parinfo=parinfo,$
-                            quiet=1)
-
+                            quiet=0)
                                 ;the true maximum is not always at
                                 ;parms[0]. Use derivative to get
                                 ;better estimate
@@ -482,13 +483,13 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
  ;          if rho[j] gt 11 then print,rho[j]
            z = find_zeros(theta_fit,df)
 ;           if rho[j] gt 11 then print,z
-           if z ne !NULL then begin
+;           if n_elements(z) gt 0 then begin
+           if z[0] ne -999 then begin
               sep = abs(parms[0] - z)
               minsep = min(sep,index)
               parms[0] = z[index]
            endif else status = 0
-
-           
+           print,'status: ',status
            ;set all parameters to -1 if there was a failure
            if status eq 0 then begin
               eparms = [-1,-1,-1,-1,-1]
@@ -551,9 +552,10 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
                  
            flag=0
            if j ne rho0_ind and n_elements(theta_arr) gt 1 then begin
-              lastgood = where(flag_arr ne 1 and status_arr gt 0)
-              lastgood = lastgood[-1]
-              
+              lastgood = where(flag_arr ne 1 and status_arr gt 0 and etheta_arr ne 0)
+              lastgood = lastgood[n_elements(lastgood)-1]
+
+
               nmask = total(slice_mask[where(theta gt (theta_arr[lastgood]-3*etheta_arr[lastgood]) and theta lt (theta_arr[lastgood]+3*etheta_arr[lastgood]))])
               if nmask gt 0 then flag=1
               if flag and not keyword_set(silent) then begin
@@ -588,7 +590,13 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
      endfor
   endfor
   
-    
+  rho_arr = rho_arr[1:n_elements(rho_arr)-1]
+  theta_arr = theta_arr[1:n_elements(theta_arr)-1]
+  etheta_arr = etheta_arr[1:n_elements(etheta_arr)-1]
+  slice_length = slice_length[1:n_elements(slice_length)-1]
+  flag_arr = flag_arr[1:n_elements(flag_arr)-1]
+  status_arr = status_arr[1:n_elements(status_arr)-1]
+
   trace = {rho:-1,theta:-1,etheta:-1,status:-1,slice_length:-1,bias_flag:-1}
   if n_elements(rho_arr) gt 0 then begin
 
