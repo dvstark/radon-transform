@@ -315,8 +315,9 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   radon = ds_radon(vel,mask=1-vel_mask,/median,aperture=radon_ap,error=evel,do_covar=do_covar,im_covar=vel_covar,radon_covar = radon_covar)
 
+  ;multiply radon ap by 2 for minor axis
   radon_norm = ds_radon(vel,mask=1-vel_mask,/median,aperture=radon_ap,error=evel,do_covar=do_covar,im_covar=vel_covar,radon_covar = nradon_covar,/normal)
-
+  ;db[dbind].nsa_elpetro_th50_r/pxscl
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;run trace, including account for covariance matrix (if keyword;;;;
   ;;;;;;set
@@ -342,10 +343,11 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
   ncovar = nradon_covar
   nsmo= 0.15 
 
-  trace_minor=trace_radon_vm(nmap,nrho,ntheta,smo=nsmo,error=enrror,mask=nmask,covar=ncovar,mc_iter=mc_iter,guess_mode='peak',/ploton,/inspect,tolerance=90) ;,/silent,/ploton,/inspect)
+  trace_minor=trace_radon_vm(nmap,nrho,ntheta,smo=nsmo,error=enrror,mask=nmask,covar=ncovar,mc_iter=mc_iter,tolerance=30,starting_radius = 3, /silent);,guess_mode='peak');,/ploton,/inspect)
 
   
-   
+ ; trace_minor.rho = -1*trace_minor.rho
+  
   convert_radon,radon.map,radon_rescale,1,mask=radon_mask
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -356,13 +358,14 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
   ;; ext3 = radon
   ;; ext4 = radon_rescale
   ;; ext5 = radon_mask
-  ;; ext6 = error
-  ;; ext7 = theta
-  ;; ext8 = rho
-  ;; ext9 = length
-  ;; ext10 = maskfrac
-  ;; ext11 = edge
-  ;; ext12 = trace
+  ;; ext6 = radon_norm
+  ;; ext7 = error
+  ;; ext8 = theta
+  ;; ext9 = rho
+  ;; ext10 = length
+  ;; ext11 = maskfrac
+  ;; ext12 = edge
+  ;; ext13 = trace
 
   if file_test(outfile) then spawn,'rm '+outfile
   writefits,outfile,0
@@ -372,6 +375,7 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
   mwrfits,radon.map,outfile
   mwrfits,radon_rescale,outfile
   mwrfits,radon_mask,outfile
+  mwrfits,radon_norm,outfile
   mwrfits,radon.error,outfile
   mwrfits,radon.theta,outfile
   mwrfits,radon.rho,outfile
@@ -381,7 +385,7 @@ pro radon_wrapper_minor,name,output,outfile,xshift=xshift,yshift=yshift,plotfile
   mwrfits,trace,outfile
 
   ;add extension names
-  extnames = ['velocity','velocity_error','velocity_mask','radon','radon_rescale','radon_mask','radon_error','radon_theta','radon_rho','radon_length','radon_maskfrac','radon_edge','trace']
+  extnames = ['velocity','velocity_error','velocity_mask','radon','radon_rescale','radon_mask','radon_norm','radon_error','radon_theta','radon_rho','radon_length','radon_maskfrac','radon_edge','trace']
   for i=1,n_elements(extnames) do begin
      t=mrdfits(outfile,i,hd)
      sxaddpar,hd,'extname',extnames[i-1]

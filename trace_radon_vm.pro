@@ -1,4 +1,4 @@
-function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton,inspect=inspect,silent=silent,covar=covar,mc_iter=mc_iter,invert=invert,center_only=center_only,tolerance=tolerance,guess_mode = guess_mode;, fit_range=fit_range
+function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton,inspect=inspect,silent=silent,covar=covar,mc_iter=mc_iter,invert=invert,center_only=center_only,tolerance=tolerance,guess_mode = guess_mode, starting_radius = starting_radius;, fit_range=fit_range
   
   if keyword_set(inspect) then silent=0
 
@@ -53,6 +53,9 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
 ;tolerance -- set to ensure estimate centroid is not more than
 ;             "tolerance" degrees from previous measurement. Defaults
 ;              to 30 degrees
+;
+;starting_radius -- starting radius (good if want to avoid the center, which
+;             seems often necessary when trying to trace minor axis)
   
   
 ;OUTPUTS
@@ -120,7 +123,13 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
   ;;;;;wrapping issues. kind of brute force way of doing this, see if;;;;;;
   ;;;;;something;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;better;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  im_orig=im
+  theta_orig=theta
+  convert_radon,im_orig,im_inv,2,mask=mask
   
+  extend=1
+  if extend then begin
   translate_radon,im,left,-1*dim[0]
   translate_radon,im,right,dim[0]
   im_ext = [left,im,right]
@@ -139,9 +148,7 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
   im_inds_ext = [left,im_inds,right]
   
                                 ;replace old arrays with these ones
-  im_orig=im
-  theta_orig=theta
-  convert_radon,im_orig,im_inv,2,mask=mask
+
   
   im=im_ext
   theta=theta_ext
@@ -149,6 +156,9 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
   mask=mask_ext
   im_inds = im_inds_ext
 
+endif
+  
+  
   ;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;initialize output;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -166,9 +176,14 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   for side=0,1 do begin
-
-     rho0_ind=where(rho eq 0)
-     if rho0_ind eq -1 then rho0_ind = (dim[1]-1)/2.
+     if 1-keyword_set(starting_radius) then begin
+        rho0_ind=where(rho eq 0)
+        if rho0_ind eq -1 then rho0_ind = (dim[1]-1)/2.
+     endif else begin
+        if side eq 1 then starting_radius = -1*starting_radius
+        rho0_ind = closest(rho,starting_radius)
+     endelse
+;     if keyword_set(starting_radius) then stop
      
      if side eq 0 then begin
         rho_start = rho0_ind[0]
@@ -254,7 +269,7 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
            p1=!p
            x1=!x
            y1=!y
-           cgplot,theta,slice_orig,err_yhigh=slice_err,err_ylow=slice_err,xrange=[-!pi/2,1.5*!pi],/err_clip
+           cgplot,theta,slice_orig,err_yhigh=slice_err,err_ylow=slice_err,/err_clip;,xrange=[-!pi/2,1.5*!pi],
            p2=!p
            x2=!x
            y2=!y
@@ -263,8 +278,10 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
         endif
            
 
-        ;run tool to find peaks in the data
-        p=peakfinder(slice[sel],theta[sel],/optimize,climits=climits,/widget_off,silent=silent)
+                                ;run tool to find peaks in the data
+        psel=where(1-slice_mask and theta ge 0 and theta le !pi,cnt) ;identify good regions
+        if cnt lt 3 then continue
+        p=peakfinder(slice[psel],theta[psel],/optimize,climits=climits,/widget_off,silent=silent)
         psz=size(p,/dim)
         if p[n_elements(p)-1] eq 0 then begin
            if not silent then print,'no peaks found at rho = '+strtrim(string(rho[j]),2)+'. Skipping'
@@ -509,7 +526,7 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
 
            parms = mpfitfun(func_name,theta_fit,newslice_fit,slice_err_fit,yfit=out,$
                             bestnorm=chisq,perror=eparms,status=status,parinfo=parinfo,$
-                            quiet=0)
+                            quiet=(silent eq 0))
                                 ;the true maximum is not always at
                                 ;parms[0]. Use derivative to get
                                 ;better estimate
@@ -574,7 +591,7 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
         
         if total(1-finite(parms)) eq 0 then begin
                                 ;save the fit output
-           rho_arr = [rho_arr,rho[j]]
+           rho_arr = [rho_arr,rho[j]]          
            theta_arr = [theta_arr,parms[0]]
            etheta_arr = [etheta_arr,eparms[0]]
            status_arr = [status_arr,status]
@@ -633,14 +650,18 @@ function trace_radon_vm,im,rho,theta,mask=mask,smo=smo,error=error,ploton=ploton
   status_arr = status_arr[1:n_elements(status_arr)-1]
 
   trace = {rho:-1,theta:-1,etheta:-1,status:-1,slice_length:-1,bias_flag:-1}
+
+  
   if n_elements(rho_arr) gt 0 then begin
 
                                 ;fix jumps around 180/360 if present
-     unwrap_pa,rho_arr,theta_arr,srtarr=srt
-     status_arr = status_arr[srt]
-     flag_arr = flag_arr[srt]
-     etheta_arr = etheta_arr[srt]
-     slice_length = slice_length[srt]
+
+
+    unwrap_pa,rho_arr,theta_arr,srtarr=srt
+    status_arr = status_arr[srt]
+    flag_arr = flag_arr[srt]
+    etheta_arr = etheta_arr[srt]
+    slice_length = slice_length[srt]
      
      if keyword_set(ploton) then begin
      
