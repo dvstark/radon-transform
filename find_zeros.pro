@@ -29,7 +29,7 @@ function find_zeros,x,y
         z = interpol(xl[sel],yl[sel],0)
         zero = [zero,z]
      endfor
-     
+     if n_elements(zero) eq 0 then zero=[-999]
 
 ;     print,''
   endelse
